@@ -53,13 +53,21 @@ public class Acquisition {
 		final float FPI = (float) Math.PI;
 
 		// Wipe off the carrier (from the given samples)
-		// TODO
+		// TODO: for all fd
 		{
 			float fd = 0; // We use the un-shifted samples
 
-			for (int i = 0; i < sCount; ++i) {
+			for (int i = 0; i < sCount; ++i)
+			{
 				final float angle = 2 * FPI * fd * i / FREQ_SAMPLING;
-				final float s_r = sample_r[i] * (float) Math.cos(angle) + sample_i[i] * (float) Math.sin(angle);
+				final float sined = (float) Math.sin(angle);
+				final float cosed = (float) Math.cos(angle);
+
+				final float s_r =  sample_r[i] * cosed + sample_i[i] * sined;
+				final float s_i = -sample_r[i] * sined + sample_i[i] * cosed;
+
+				sample_r[i] = s_r;
+				sample_i[i] = s_i;
 			}
 		}
 
