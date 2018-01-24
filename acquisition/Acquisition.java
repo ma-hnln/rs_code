@@ -18,22 +18,40 @@ public class Acquisition {
 	// Dynamic input parameters
 	private final int sCount;
 
-	// Sample storage, currently only for unmodified samples
+	// Sample storage for unmodified samples
 	private final float[] sample_r;
 	private final float[] sample_i;
 	private int sampleWriteIndex = 0;
 
-	// Code storage
+	// Storage for intermediate results
+	private final float[] res_r_1;
+	private final float[] res_i_1;
+	private final float[] res_r_2;
+	private final float[] res_i_2;
+
+	// Code storage (not transformed)
 	private final float[] code_r;
 	private final float[] code_i;
 	private int codeWriteIndex = 0;
 
+	// Storage for DFT(code) results
+	private final float[] code_r_dft;
+	private final float[] code_i_dft;
+
 	public Acquisition(int nrOfSamples) {
 		this.sCount = nrOfSamples;
+
 		this.sample_r = new float[this.sCount];
 		this.sample_i = new float[this.sCount];
+		this.res_r_1 = new float[sCount];
+		this.res_i_1 = new float[sCount];
+		this.res_r_2 = new float[sCount];
+		this.res_i_2 = new float[sCount];
+
 		this.code_r = new float[this.sCount];
 		this.code_i = new float[this.sCount];
+		this.code_r_dft = new float[this.sCount];
+		this.code_i_dft = new float[this.sCount];
 	}
 	
 	public void enterSample(float real, float imag) {
@@ -45,18 +63,30 @@ public class Acquisition {
 	public void enterCode(float real, float imag) {
 		code_r[codeWriteIndex] = real;
 		code_i[codeWriteIndex] = imag;
-		++sampleWriteIndex;
+		++codeWriteIndex;
 	}
 	
-	public boolean startAcquisition(){
-		// Code for one (un-shifted) sample pack, see sample_r and sample_i
+	public boolean startAcquisition() {
 		final float FPI = (float) Math.PI;
 
-		// Wipe off the carrier (from the given samples)
-		// TODO: for all fd
-		{
-			float fd = 0; // We currently use the un-shifted samples
+		// --- Prepare the code samples by transforming and complex conjugating them
+		dft(code_r, code_i, code_r_dft, code_i_dft);
 
+		for (int i = 0; i < sCount; ++i)
+			code_i_dft[i] *= -1;
+
+		// --- Calculate Smax on the fly while performing all the other operations
+		float smax = 0;
+		float fdAtMax = 0;
+		int tauAtMax = 0;
+
+		// --- Loop to visit all required frequency shifts (fd)
+		for (int j = 0; j < FREQ_STEP_COUNT; ++j)
+		{
+			// --- Value of fd for this loop iteration
+			final float fd = FREQ_MOD_MIN + FREQ_MOD_STEP * j;
+
+			// --- Wipe off the carrier (from the given samples) using the current fd
 			for (int i = 0; i < sCount; ++i)
 			{
 				final float angle = 2 * FPI * fd * i / FREQ_SAMPLING;
@@ -66,61 +96,49 @@ public class Acquisition {
 				final float s_r =  sample_r[i] * cosed + sample_i[i] * sined;
 				final float s_i = -sample_r[i] * sined + sample_i[i] * cosed;
 
-				sample_r[i] = s_r;
-				sample_i[i] = s_i;
+				res_r_1[i] = s_r;
+				res_i_1[i] = s_i;
+			}
+
+			// ... Samples in res1
+
+			// --- Apply the DFT to the given samples which had the carrier wiped off
+			dft(res_r_1, res_i_1, res_r_2, res_i_2);
+
+			// ... Samples in res2
+
+			// --- Multiply both (samples and code) DFT results
+			for (int i = 0; i < sCount; ++i) {
+				final float real = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
+				res_r_2[i] = real;
+
+				final float imag = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
+				res_i_2[i] = imag;
+			}
+
+			// ... Samples in res2
+
+			// --- Apply the IDFT to retrieve the results
+			idft(res_r_2, res_i_2, res_r_1, res_i_1);
+
+			// ... Samples in res1
+
+			// --- Search the maximum in the resulting vector
+			for (int i = 0; i < sCount; ++i) {
+				final float abs_sqr = res_r_1[i] * res_r_1[i] + res_i_1[i] * res_i_1[i];
+				if (smax < abs_sqr) {
+					smax = abs_sqr;
+					fdAtMax = fd;
+					tauAtMax = i;
+				}
 			}
 		}
 
-		// Apply DFT to the given code samples and complex conjugate the result
-		// -> What about the transpose operation from the slides?
-		// TODO: for all fd
-		float[] code_r_dft = new float[sCount];
-		float[] code_i_dft = new float[sCount];
+		// --- Save results
+		dopplerShift =  (int) fdAtMax;
+		codeShift = tauAtMax;
 
-		dft(code_r, code_i, code_r_dft, code_i_dft);
-
-		for (int i = 0; i < sCount; ++i)
-			code_i_dft[i] *= -1;
-
-		// Apply DFT to the given samples which had the carrier wiped off
-		// TODO: for all fd
-		float[] sample_r_dft = new float[sCount];
-		float[] sample_i_dft = new float[sCount];
-
-		dft(sample_r, sample_i, sample_r_dft, sample_i_dft);
-
-		// Multiply both DFT results
-		// TODO: how is this multiplication performed? also, for all fd
-		float[] sample_code_mul_r = new float[sCount];
-		float[] sample_code_mul_i = new float[sCount];
-
-		// Apply IDFT (normalise the result at the same time?)
-		// TODO: for all fd
-
-		float[] res_idft_r = new float[sCount];
-		float[] res_idft_i = new float[sCount];
-
-		idft(sample_code_mul_r, sample_code_mul_i, res_idft_r, res_idft_i);
-
-		// Calculate Smax of the resulting vector (will be the matrix later on)
-		float smax = 0;
-		int fd = 0;
-		int tau = 0;
-
-		// TODO: for all fd
-		for (int i = 0; i < sCount; ++i) {
-			final float abs_sqr = res_idft_r[i] * res_idft_r[i] + res_idft_i[i] * res_idft_i[i];
-			if (smax < abs_sqr) {
-				smax = abs_sqr;
-				fd = 0; // To be replaced by the actual loop variant
-				tau = i;
-			}
-		}
-
-		dopplerShift = fd;
-		codeShift = tau;
-
-		// Calculate the signals' power (do not forget the normalisation)
+		// --- Calculate the signals' power (do not forget the normalisation)
 		float pin = 0;
 		for (int i = 0; i < sCount; ++i) {
 			final float abs_sqr = sample_r[i] * sample_r[i] + sample_i[i] * sample_i[i];
@@ -128,7 +146,7 @@ public class Acquisition {
 		}
 		pin /= sCount;
 
-		// Calculate the threshold from these values
+		// --- Calculate the threshold by using the results
 		final float resultingThreshold = smax / pin;
 
 		return resultingThreshold > ACQ_THRESHOLD;
