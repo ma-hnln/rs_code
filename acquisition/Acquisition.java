@@ -1,5 +1,6 @@
 package gps.acquisition;
 
+import cgra.pe.PETrigonometry;
 
 public class Acquisition {
 
@@ -10,6 +11,7 @@ public class Acquisition {
 	private static final float FREQ_MOD_STEP = 1000;
 	private static final float FREQ_SAMPLING = 400000;
 	private static final float ACQ_THRESHOLD = 0.015f;
+	private static final float FPI = (float) Math.PI;
 
 	// Results
 	private int dopplerShift = 0;
@@ -43,10 +45,10 @@ public class Acquisition {
 
 		this.sample_r = new float[this.sCount];
 		this.sample_i = new float[this.sCount];
-		this.res_r_1 = new float[sCount];
-		this.res_i_1 = new float[sCount];
-		this.res_r_2 = new float[sCount];
-		this.res_i_2 = new float[sCount];
+		this.res_r_1 = new float[this.sCount];
+		this.res_i_1 = new float[this.sCount];
+		this.res_r_2 = new float[this.sCount];
+		this.res_i_2 = new float[this.sCount];
 
 		this.code_r = new float[this.sCount];
 		this.code_i = new float[this.sCount];
@@ -67,7 +69,7 @@ public class Acquisition {
 	}
 	
 	public boolean startAcquisition() {
-		final float FPI = (float) Math.PI;
+		final float lFPI = FPI;
 
 		// --- Prepare the code samples by transforming and complex conjugating them
 		dft(code_r, code_i, code_r_dft, code_i_dft);
@@ -89,9 +91,9 @@ public class Acquisition {
 			// --- Wipe off the carrier (from the given samples) using the current fd
 			for (int i = 0; i < sCount; ++i)
 			{
-				final float angle = 2 * FPI * fd * i / FREQ_SAMPLING;
-				final float sined = (float) Math.sin(angle);
-				final float cosed = (float) Math.cos(angle);
+				final float angle = 2 * lFPI * fd * i / FREQ_SAMPLING;
+				final float sined = PETrigonometry.sin(angle);
+				final float cosed = PETrigonometry.cos(angle);
 
 				final float s_r =  sample_r[i] * cosed + sample_i[i] * sined;
 				final float s_i = -sample_r[i] * sined + sample_i[i] * cosed;
@@ -166,14 +168,16 @@ public class Acquisition {
 	static private void dft(float[] in_r , float[] in_i,
 					 		float[] out_r, float[] out_i)
 	{
+		final float lFPI = FPI;
 		final int n = in_r.length;
+
 		for (int k = 0; k < n; k++) { // For each output element
 			float sumreal = 0;
 			float sumimag = 0;
 			for (int t = 0; t < n; t++) { // For each input element
-				double angle = 2 * Math.PI * t * k / n;
-				sumreal +=  in_r[t] * Math.cos(angle) + in_i[t] * Math.sin(angle);
-				sumimag += -in_r[t] * Math.sin(angle) + in_i[t] * Math.cos(angle);
+				float angle = 2 * lFPI * t * k / n;
+				sumreal +=  in_r[t] * PETrigonometry.cos(angle) + in_i[t] * PETrigonometry.sin(angle);
+				sumimag += -in_r[t] * PETrigonometry.sin(angle) + in_i[t] * PETrigonometry.cos(angle);
 			}
 			out_r[k] = sumreal;
 			out_i[k] = sumimag;
@@ -192,14 +196,16 @@ public class Acquisition {
 	static private void idft(float[] in_r , float[] in_i,
 							 float[] out_r, float[] out_i)
 	{
+		final float lFPI = FPI;
 		final int n = in_r.length;
+
 		for (int k = 0; k < n; k++) { // For each output element
 			float sumreal = 0;
 			float sumimag = 0;
 			for (int t = 0; t < n; t++) { // For each input element
-				double angle = 2 * Math.PI * t * k / n;
-				sumreal +=  in_r[t] * Math.sin(angle) + in_i[t] * Math.cos(angle);
-				sumimag += -in_r[t] * Math.cos(angle) + in_i[t] * Math.sin(angle);
+				float angle = 2 * lFPI * t * k / n;
+				sumreal +=  in_r[t] * PETrigonometry.sin(angle) + in_i[t] * PETrigonometry.cos(angle);
+				sumimag += -in_r[t] * PETrigonometry.cos(angle) + in_i[t] * PETrigonometry.sin(angle);
 			}
 			out_r[k] = sumreal / n;
 			out_i[k] = sumimag / n;
@@ -213,7 +219,5 @@ public class Acquisition {
 	public int getCodeVerschiebung(){
 		return codeShift;
 	}
-	
-	
 
 }

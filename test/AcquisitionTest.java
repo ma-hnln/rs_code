@@ -39,6 +39,8 @@ public class AcquisitionTest {
 			String line = readLine(brData);
 			nrOfSamples = Integer.parseInt(line);
 			acq = new Acquisition(nrOfSamples);
+
+			System.out.println("Sample Count: " + nrOfSamples);
 			
 			for(int i = 0; i < nrOfSamples; i++){
 				line = readLine(brData);
