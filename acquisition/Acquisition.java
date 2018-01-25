@@ -72,57 +72,65 @@ public class Acquisition {
 		final float lFPI = FPI;
 
 		// --- Prepare the code samples by transforming and complex conjugating them
+		// OK
 		dft(code_r, code_i, code_r_dft, code_i_dft);
 
 		for (int i = 0; i < sCount; ++i)
 			code_i_dft[i] *= -1;
 
 		// --- Calculate Smax on the fly while performing all the other operations
+		// OK
 		float smax = 0;
 		float fdAtMax = 0;
 		int tauAtMax = 0;
 
 		// --- Loop to visit all required frequency shifts (fd)
+		// OK
 		for (int j = 0; j < FREQ_STEP_COUNT; ++j)
 		{
 			// --- Value of fd for this loop iteration
+			// OK
 			final float fd = FREQ_MOD_MIN + FREQ_MOD_STEP * j;
 
 			// --- Wipe off the carrier (from the given samples) using the current fd
+			// OK
 			for (int i = 0; i < sCount; ++i)
 			{
 				final float angle = 2 * lFPI * fd * i / FREQ_SAMPLING;
 				final float sined = PETrigonometry.sin(angle);
 				final float cosed = PETrigonometry.cos(angle);
 
-				res_r_1[i] = sample_r[i] * cosed + sample_i[i] * sined;
+				res_r_1[i] =  sample_r[i] * cosed + sample_i[i] * sined;
 				res_i_1[i] = -sample_r[i] * sined + sample_i[i] * cosed;
 			}
 
 			// ... Samples in res1
 
 			// --- Apply the DFT to the given samples which had the carrier wiped off
+			// OK
 			dft(res_r_1, res_i_1, res_r_2, res_i_2);
 
 			// ... Samples in res2
 
 			// --- Multiply both (samples and code) DFT results
+			// OK
 			for (int i = 0; i < sCount; ++i) {
-				res_r_2[i] = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
-				res_i_2[i] = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
+				res_r_1[i] = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
+				res_i_1[i] = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
 			}
 
-			// ... Samples in res2
+			// ... Samples in res1
 
 			// --- Apply the IDFT to retrieve the results
-			idft(res_r_2, res_i_2, res_r_1, res_i_1);
+			// OK
+			idft(res_r_1, res_i_1, res_r_2, res_i_2);
 
-			// ... Samples in res1
+			// ... Samples in res2
 
 			// --- Search the maximum in the resulting vector
 			// OK
 			for (int i = 0; i < sCount; ++i) {
-				final float abs_sqr = res_r_1[i] * res_r_1[i] + res_i_1[i] * res_i_1[i];
+				final float abs_sqr = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
 				if (smax < abs_sqr) {
 					smax = abs_sqr;
 					fdAtMax = fd;
@@ -202,8 +210,8 @@ public class Acquisition {
 			float sumimag = 0;
 			for (int t = 0; t < n; t++) { // For each input element
 				float angle = 2 * lFPI * t * k / n;
-				sumreal +=  in_r[t] * PETrigonometry.sin(angle) + in_i[t] * PETrigonometry.cos(angle);
-				sumimag += -in_r[t] * PETrigonometry.cos(angle) + in_i[t] * PETrigonometry.sin(angle);
+				sumreal += in_r[t] * PETrigonometry.cos(angle) - in_i[t] * PETrigonometry.sin(angle);
+				sumimag += in_r[t] * PETrigonometry.sin(angle) + in_i[t] * PETrigonometry.cos(angle);
 			}
 			out_r[k] = sumreal / n;
 			out_i[k] = sumimag / n;
