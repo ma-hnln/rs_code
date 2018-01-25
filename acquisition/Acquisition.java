@@ -95,11 +95,8 @@ public class Acquisition {
 				final float sined = PETrigonometry.sin(angle);
 				final float cosed = PETrigonometry.cos(angle);
 
-				final float s_r =  sample_r[i] * cosed + sample_i[i] * sined;
-				final float s_i = -sample_r[i] * sined + sample_i[i] * cosed;
-
-				res_r_1[i] = s_r;
-				res_i_1[i] = s_i;
+				res_r_1[i] = sample_r[i] * cosed + sample_i[i] * sined;
+				res_i_1[i] = -sample_r[i] * sined + sample_i[i] * cosed;
 			}
 
 			// ... Samples in res1
@@ -111,11 +108,8 @@ public class Acquisition {
 
 			// --- Multiply both (samples and code) DFT results
 			for (int i = 0; i < sCount; ++i) {
-				final float real = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
-				res_r_2[i] = real;
-
-				final float imag = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
-				res_i_2[i] = imag;
+				res_r_2[i] = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
+				res_i_2[i] = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
 			}
 
 			// ... Samples in res2
@@ -126,6 +120,7 @@ public class Acquisition {
 			// ... Samples in res1
 
 			// --- Search the maximum in the resulting vector
+			// OK
 			for (int i = 0; i < sCount; ++i) {
 				final float abs_sqr = res_r_1[i] * res_r_1[i] + res_i_1[i] * res_i_1[i];
 				if (smax < abs_sqr) {
@@ -137,18 +132,21 @@ public class Acquisition {
 		}
 
 		// --- Save results
+		// OK
 		dopplerShift =  (int) fdAtMax;
 		codeShift = tauAtMax;
 
 		// --- Calculate the signals' power (do not forget the normalisation)
+		// OK
 		float pin = 0;
-		for (int i = 0; i < sCount; ++i) {
-			final float abs_sqr = sample_r[i] * sample_r[i] + sample_i[i] * sample_i[i];
-			pin += abs_sqr;
-		}
+		
+		for (int i = 0; i < sCount; ++i)
+			pin += sample_r[i] * sample_r[i] + sample_i[i] * sample_i[i];
+		
 		pin /= sCount;
 
 		// --- Calculate the threshold by using the results
+		// OK
 		final float resultingThreshold = smax / pin;
 
 		return resultingThreshold > ACQ_THRESHOLD;
