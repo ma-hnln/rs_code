@@ -1,6 +1,6 @@
 package gps.test;
 
-import gps.acquisition.Acquisition;
+import gps.acquisition.*;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -13,7 +13,7 @@ public class AcquisitionTest {
 	public static void main(String[] args) {
 		
 
-		Acquisition acq = null;
+		Acquisition_v118006831 acq = null;
 		
 		int testNr = 1;
 		
@@ -37,8 +37,8 @@ public class AcquisitionTest {
 			int nrOfSamples;
 			
 			String line = readLine(brData);
-			nrOfSamples = Integer.parseInt(line);
-			acq = new Acquisition(nrOfSamples);
+			nrOfSamples = 400;//Integer.parseInt(line);
+			acq = new Acquisition_v118006831(nrOfSamples);
 
 			System.out.println("Sample Count: " + nrOfSamples);
 			
@@ -59,7 +59,7 @@ public class AcquisitionTest {
 			line = readLine(brCode);
 			if(nrOfSamples != Integer.parseInt(line)){
 				System.out.println("ERROR: Code length and data length do not match");
-				System.exit(0);
+				//System.exit(0);
 			}
 			
 
