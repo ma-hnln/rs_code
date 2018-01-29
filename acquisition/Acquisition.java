@@ -26,6 +26,9 @@ public class Acquisition {
 	private int sampleWriteIndex = 0;
 
 	// Storage for intermediate results
+	private final float[] sample_dft_r;
+	private final float[] sample_dft_i;
+
 	private final float[] res_r_1;
 	private final float[] res_i_1;
 	private final float[] res_r_2;
@@ -45,6 +48,9 @@ public class Acquisition {
 
 		this.sample_r = new float[this.sCount];
 		this.sample_i = new float[this.sCount];
+
+		this.sample_dft_r = new float[this.sCount];
+		this.sample_dft_i = new float[this.sCount];
 		this.res_r_1 = new float[this.sCount];
 		this.res_i_1 = new float[this.sCount];
 		this.res_r_2 = new float[this.sCount];
@@ -72,51 +78,53 @@ public class Acquisition {
 		final float lFPI = FPI;
 
 		// --- Prepare the code samples by transforming and complex conjugating them
-		// OK
 		dft(code_r, code_i, code_r_dft, code_i_dft);
 
 		for (int i = 0; i < sCount; ++i)
 			code_i_dft[i] *= -1;
 
+		// --- Prepare the samples by by transforming them
+		// We do this with the raw samples, no carrier wipe off is performed at this point.
+		// The wipe off is happening by applying it in the frequency domain.
+		dft(sample_r, sample_i, sample_dft_r, sample_dft_i);
+
 		// --- Calculate Smax on the fly while performing all the other operations
-		// OK
 		float smax = 0;
 		float fdAtMax = 0;
 		int tauAtMax = 0;
 
 		// --- Loop to visit all required frequency shifts (fd)
-		// OK
 		for (int j = 0; j < FREQ_STEP_COUNT; ++j)
 		{
 			// --- Value of fd for this loop iteration
-			// OK
 			final float fd = FREQ_MOD_MIN + FREQ_MOD_STEP * j;
 
 			// --- Wipe off the carrier (from the given samples) using the current fd
-			// OK
-			for (int i = 0; i < sCount; ++i)
+			// We do this in the frequency domain by applying the frequency shift
+			// directly to the transformed samples: 
+			//
+			// x(n)*e^(j*2*PI*n*i/N) , with i = -N*fd/fs
+			// ->
+			// X((k-i) mod N) 
+			//
+			// Omit the '-' as we will just add it to k. 
 			{
-				final float angle = 2 * lFPI * fd * i / FREQ_SAMPLING;
-				final float sined = PETrigonometry.sin(angle);
-				final float cosed = PETrigonometry.cos(angle);
-
-				res_r_1[i] =  sample_r[i] * cosed + sample_i[i] * sined;
-				res_i_1[i] = -sample_r[i] * sined + sample_i[i] * cosed;
+				// This is going to be a problem for lower sample counts...
+				final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
+				for (int k = 0; k < sCount; ++k)
+				{
+					final int index = (((k + i) % sCount) + sCount) % sCount;
+					res_r_2[k] = sample_dft_r[index];
+					res_i_2[k] = sample_dft_i[index];
+				}
 			}
-
-			// ... Samples in res1
-
-			// --- Apply the DFT to the given samples which had the carrier wiped off
-			// OK
-			dft(res_r_1, res_i_1, res_r_2, res_i_2);
 
 			// ... Samples in res2
 
 			// --- Multiply both (samples and code) DFT results
-			// OK
-			for (int i = 0; i < sCount; ++i) {
-				res_r_1[i] = res_r_2[i] * code_r_dft[i] - res_i_2[i] * code_i_dft[i];
-				res_i_1[i] = res_i_2[i] * code_r_dft[i] + res_r_2[i] * code_i_dft[i];
+			for (int k = 0; k < sCount; ++k) {
+				res_r_1[k] = res_r_2[k] * code_r_dft[k] - res_i_2[k] * code_i_dft[k];
+				res_i_1[k] = res_i_2[k] * code_r_dft[k] + res_r_2[k] * code_i_dft[k];
 			}
 
 			// ... Samples in res1

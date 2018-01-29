@@ -13,7 +13,7 @@ public class AcquisitionTest {
 	public static void main(String[] args) {
 		
 
-		Acquisition_v118006831 acq = null;
+		Acquisition acq = null;
 		
 		int testNr = 1;
 		
@@ -38,7 +38,7 @@ public class AcquisitionTest {
 			
 			String line = readLine(brData);
 			nrOfSamples = 400;//Integer.parseInt(line);
-			acq = new Acquisition_v118006831(nrOfSamples);
+			acq = new Acquisition(nrOfSamples);
 
 			System.out.println("Sample Count: " + nrOfSamples);
 			
