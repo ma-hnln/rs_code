@@ -111,11 +111,34 @@ public class Acquisition {
 			{
 				// This is going to be a problem for lower sample counts...
 				final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
-				for (int k = 0; k < sCount; ++k)
+				
+				// Get a number close to sCount for negative i
+				// Get a number close to 0 for positive i
+				final int read_start = ((i % sCount) + sCount) % sCount;
+				
+				// Get a number close to 0 for negative i (-> high start)
+				// Get a number close to sCount for positive i (-> low start)
+				final int write_end = sCount - read_start;
+				
+				// Write index for the next two loops
+				int write_index = 0;
+
+				// Read index for the next two loops
+				int k = read_start;
+				
+				for (; write_index < write_end; ++write_index)
 				{
-					final int index = (((k + i) % sCount) + sCount) % sCount;
-					res_r_2[k] = sample_dft_r[index];
-					res_i_2[k] = sample_dft_i[index];
+					res_r_2[write_index] = sample_dft_r[k];
+					res_i_2[write_index] = sample_dft_i[k];
+					++k;
+				}
+				
+				k = 0; // Wrapping around to zero
+				for (; write_index < sCount; ++write_index)
+				{
+					res_r_2[write_index] = sample_dft_r[k];
+					res_i_2[write_index] = sample_dft_i[k];
+					++k;
 				}
 			}
 
@@ -138,9 +161,9 @@ public class Acquisition {
 			// --- Search the maximum in the resulting vector
 			// OK
 			for (int i = 0; i < sCount; ++i) {
-				final float abs_sqr = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
-				if (smax < abs_sqr) {
-					smax = abs_sqr;
+				//final float abs_sqr = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
+				if (smax < res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i]) {
+					smax = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
 					fdAtMax = fd;
 					tauAtMax = i;
 				}

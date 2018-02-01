@@ -1,0 +1,37 @@
+{
+"PEs" : 
+	{
+	"0" : "PE_no_mem_reduced.json",
+	"1" : "PE_mem.json",
+	"2" : "PE_no_mem_reduced.json",
+	"3" : "PE_no_mem_reduced.json",
+	"4" : "PE_no_mem_reduced.json",
+	"5" : "PE_no_mem_reduced.json",
+	"6" : "PE_no_mem_reduced.json",
+	"7" : "PE_mem.json",
+	"8" : "PE_mem.json",
+	"9" : "PE_no_mem_reduced.json",
+	"10" : "PE_no_mem_reduced.json",
+	"11" : "PE_no_mem_reduced.json",
+	"12" : "PE_no_mem_reduced.json",
+	"13" : "PE_no_mem_reduced.json",
+	"14" : "PE_mem.json",
+	"15" : "PE_no_mem_reduced.json",
+	"16" : "PE_no_mem_reduced.json",
+	"17" : "PE_no_mem_reduced.json",
+	"18" : "PE_no_mem_reduced.json",
+	"19" : "PE_no_mem_reduced.json",
+	"20" : "PE_no_mem_reduced.json",
+	"21" : "PE_no_mem_reduced.json",
+	"22" : "PE_no_mem_reduced.json",
+	"23" : "PE_no_mem_reduced.json"
+	},
+"Context_memory_size" : 4096,
+"Interconnect" : "Interconnect_24pe_mesh_redone.json",
+"CBox_slots" : 128,
+"CBox_evaluation_blocks" : 4,
+"CBOX_output_ports_per_evaluation_blocks" : 1,
+"Pipelined" : false,
+"SecondRFOutput2ALU" : false,
+"Branch_selection_mode" : "default"
+}
