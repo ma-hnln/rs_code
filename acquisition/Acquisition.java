@@ -75,19 +75,42 @@ public class Acquisition {
 	}
 	
 	public boolean startAcquisition() {
-		final float lFPI = FPI;
-
+		
+		final float twoPIdivByN = 2 * FPI / sCount;
+		float sumreal = 0;
+		float sumimag = 0;
+		
 		// --- Prepare the code samples by transforming and complex conjugating them
-		dft(code_r, code_i, code_r_dft, code_i_dft);
-
-		for (int i = 0; i < sCount; ++i)
-			code_i_dft[i] *= -1;
+		for (int k = 0; k < sCount; k++) { // For each output element
+			sumreal = 0;
+			sumimag = 0;
+			for (int t = 0; t < sCount; t++) { // For each input element
+				sumreal +=  code_r[t] * PETrigonometry.cos(twoPIdivByN * t * k) + code_i[t] * PETrigonometry.sin(twoPIdivByN * t * k);
+				sumimag += -code_r[t] * PETrigonometry.sin(twoPIdivByN * t * k) + code_i[t] * PETrigonometry.cos(twoPIdivByN * t * k);
+			}
+			code_r_dft[k] =  sumreal;
+			code_i_dft[k] = -sumimag;
+		}
 
 		// --- Prepare the samples by by transforming them
 		// We do this with the raw samples, no carrier wipe off is performed at this point.
 		// The wipe off is happening by applying it in the frequency domain.
-		dft(sample_r, sample_i, sample_dft_r, sample_dft_i);
-
+		
+		// --- Also calculate the signals' power (do not forget the normalisation)
+		float pin = 0;
+		for (int k = 0; k < sCount; k++) { // For each output element
+			pin += sample_r[k] * sample_r[k] + sample_i[k] * sample_i[k];
+			sumreal = 0;
+			sumimag = 0;
+			for (int t = 0; t < sCount; t++) { // For each input element
+				sumreal +=  sample_r[t] * PETrigonometry.cos(twoPIdivByN * t * k) + sample_i[t] * PETrigonometry.sin(twoPIdivByN * t * k);
+				sumimag += -sample_r[t] * PETrigonometry.sin(twoPIdivByN * t * k) + sample_i[t] * PETrigonometry.cos(twoPIdivByN * t * k);
+			}
+			sample_dft_r[k] = sumreal;
+			sample_dft_i[k] = sumimag;
+		}
+		pin /= sCount;
+		
 		// --- Calculate Smax on the fly while performing all the other operations
 		float smax = 0;
 		float fdAtMax = 0;
@@ -118,14 +141,15 @@ public class Acquisition {
 				
 				// Get a number close to 0 for negative i (-> high start)
 				// Get a number close to sCount for positive i (-> low start)
-				final int write_end = sCount - read_start;
+				// final int write_end = sCount - read_start;
 				
 				// Write index for the next two loops
-				int write_index = 0;
+				// int write_index = 0;
 
 				// Read index for the next two loops
-				int k = read_start;
+				// int k = read_start;
 				
+				/*
 				for (; write_index < write_end; ++write_index)
 				{
 					res_r_2[write_index] = sample_dft_r[k];
@@ -140,32 +164,51 @@ public class Acquisition {
 					res_i_2[write_index] = sample_dft_i[k];
 					++k;
 				}
-			}
-
-			// ... Samples in res2
-
-			// --- Multiply both (samples and code) DFT results
-			for (int k = 0; k < sCount; ++k) {
-				res_r_1[k] = res_r_2[k] * code_r_dft[k] - res_i_2[k] * code_i_dft[k];
-				res_i_1[k] = res_i_2[k] * code_r_dft[k] + res_r_2[k] * code_i_dft[k];
+				*/
+			
+				// --- Multiply both (samples and code) DFT results
+				final int first_write_end = sCount - read_start;
+				
+				int read_index = read_start;
+				int k = 0;
+				
+				for (; k < first_write_end; ++k)
+				{
+					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
+					res_i_1[k] = sample_dft_i[read_index] * code_r_dft[k] + sample_dft_r[read_index] * code_i_dft[k];
+					++read_index;
+				}
+				
+				read_index = 0; // Wrapping around to zero
+				for (; k < sCount; ++k)
+				{
+					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
+					res_i_1[k] = sample_dft_i[read_index] * code_r_dft[k] + sample_dft_r[read_index] * code_i_dft[k];
+					++k;
+				}
 			}
 
 			// ... Samples in res1
 
 			// --- Apply the IDFT to retrieve the results
-			// OK
-			idft(res_r_1, res_i_1, res_r_2, res_i_2);
-
-			// ... Samples in res2
-
-			// --- Search the maximum in the resulting vector
-			// OK
-			for (int i = 0; i < sCount; ++i) {
-				//final float abs_sqr = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
-				if (smax < res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i]) {
-					smax = res_r_2[i] * res_r_2[i] + res_i_2[i] * res_i_2[i];
+			for (int k = 0; k < sCount; k++) { // For each output element
+				sumreal = 0;
+				sumimag = 0;
+				
+				for (int t = 0; t < sCount; t++) { // For each input element
+					// final float angle = constant * t * k;
+					sumreal += res_r_1[t] * PETrigonometry.cos(twoPIdivByN * t * k) - res_i_1[t] * PETrigonometry.sin(twoPIdivByN * t * k);
+					sumimag += res_r_1[t] * PETrigonometry.sin(twoPIdivByN * t * k) + res_i_1[t] * PETrigonometry.cos(twoPIdivByN * t * k);
+				}
+				
+				final float res_r = sumreal / sCount;
+				final float res_i = sumimag / sCount;
+				
+				// --- Search the maximum in the resulting vector
+				if (smax < res_r * res_r + res_i * res_i) {
+					smax = res_r * res_r + res_i * res_i;
 					fdAtMax = fd;
-					tauAtMax = i;
+					tauAtMax = k;
 				}
 			}
 		}
@@ -174,15 +217,6 @@ public class Acquisition {
 		// OK
 		dopplerShift =  (int) fdAtMax;
 		codeShift = tauAtMax;
-
-		// --- Calculate the signals' power (do not forget the normalisation)
-		// OK
-		float pin = 0;
-		
-		for (int i = 0; i < sCount; ++i)
-			pin += sample_r[i] * sample_r[i] + sample_i[i] * sample_i[i];
-		
-		pin /= sCount;
 
 		// --- Calculate the threshold by using the results
 		// OK
