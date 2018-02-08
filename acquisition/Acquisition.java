@@ -133,40 +133,14 @@ public class Acquisition {
 			// Omit the '-' as we will just add it to k. 
 			{
 				// This is going to be a problem for lower sample counts...
-				final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
+				final int i =  Math.round(((float)sCount * fd) / FREQ_SAMPLING);
+				// final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
 				
 				// Get a number close to sCount for negative i
 				// Get a number close to 0 for positive i
-				final int read_start = ((i % sCount) + sCount) % sCount;
-				
-				// Get a number close to 0 for negative i (-> high start)
-				// Get a number close to sCount for positive i (-> low start)
-				// final int write_end = sCount - read_start;
-				
-				// Write index for the next two loops
-				// int write_index = 0;
-
-				// Read index for the next two loops
-				// int k = read_start;
-				
-				/*
-				for (; write_index < write_end; ++write_index)
-				{
-					res_r_2[write_index] = sample_dft_r[k];
-					res_i_2[write_index] = sample_dft_i[k];
-					++k;
-				}
-				
-				k = 0; // Wrapping around to zero
-				for (; write_index < sCount; ++write_index)
-				{
-					res_r_2[write_index] = sample_dft_r[k];
-					res_i_2[write_index] = sample_dft_i[k];
-					++k;
-				}
-				*/
+				final int read_start = (sCount + i) % sCount;
 			
-				// --- Multiply both (samples and code) DFT results
+				// --- Directly multiply both (samples and code) DFT results
 				final int first_write_end = sCount - read_start;
 				
 				int read_index = read_start;
@@ -184,7 +158,7 @@ public class Acquisition {
 				{
 					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
 					res_i_1[k] = sample_dft_i[read_index] * code_r_dft[k] + sample_dft_r[read_index] * code_i_dft[k];
-					++k;
+					++read_index;
 				}
 			}
 
