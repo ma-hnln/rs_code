@@ -129,7 +129,8 @@ public class Acquisition {
 			// We omit the '-' of i as we will just add it to k. 
 			{
 				// This is going to be a problem for lower sample counts...
-				final int i =  Math.round(((float)sCount * fd) / FREQ_SAMPLING);
+				final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
+				// final int i =  Math.round(((float)sCount * fd) / FREQ_SAMPLING);
 				final int read_start = (sCount + i) % sCount;
 				final int first_write_end = sCount - read_start;
 				
