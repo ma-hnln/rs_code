@@ -31,8 +31,6 @@ public class Acquisition {
 
 	private final float[] res_r_1;
 	private final float[] res_i_1;
-	private final float[] res_r_2;
-	private final float[] res_i_2;
 
 	// Code storage (not transformed)
 	private final float[] code_r;
@@ -53,8 +51,6 @@ public class Acquisition {
 		this.sample_dft_i = new float[this.sCount];
 		this.res_r_1 = new float[this.sCount];
 		this.res_i_1 = new float[this.sCount];
-		this.res_r_2 = new float[this.sCount];
-		this.res_i_2 = new float[this.sCount];
 
 		this.code_r = new float[this.sCount];
 		this.code_i = new float[this.sCount];
@@ -130,22 +126,17 @@ public class Acquisition {
 			// ->
 			// X((k-i) mod N) 
 			//
-			// Omit the '-' as we will just add it to k. 
+			// We omit the '-' of i as we will just add it to k. 
 			{
 				// This is going to be a problem for lower sample counts...
 				final int i =  Math.round(((float)sCount * fd) / FREQ_SAMPLING);
-				// final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
-				
-				// Get a number close to sCount for negative i
-				// Get a number close to 0 for positive i
 				final int read_start = (sCount + i) % sCount;
-			
-				// --- Directly multiply both (samples and code) DFT results
 				final int first_write_end = sCount - read_start;
 				
 				int read_index = read_start;
 				int k = 0;
 				
+				// --- Directly multiply both (samples and code) DFT results
 				for (; k < first_write_end; ++k)
 				{
 					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
@@ -188,12 +179,10 @@ public class Acquisition {
 		}
 
 		// --- Save results
-		// OK
 		dopplerShift =  (int) fdAtMax;
 		codeShift = tauAtMax;
 
 		// --- Calculate the threshold by using the results
-		// OK
 		final float resultingThreshold = smax / pin;
 
 		return resultingThreshold > ACQ_THRESHOLD;
