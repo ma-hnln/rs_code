@@ -129,8 +129,17 @@ public class Acquisition {
 			// We omit the '-' of i as we will just add it to k. 
 			{
 				// This is going to be a problem for lower sample counts...
-				final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
-				// final int i =  Math.round(((float)sCount * fd) / FREQ_SAMPLING);
+				// final int i = (sCount * (int) fd) / (int) FREQ_SAMPLING;
+				final float float_i = (((float) sCount * fd) / FREQ_SAMPLING);
+				final int i =  float_i < 0.0 ? (int) float_i - 1 : (int) float_i; // Math.round(((float)sCount * fd) / FREQ_SAMPLING);
+				
+				final float lower_factor = 1.0f - (float_i - (float) i);
+				final float upper_factor = (float_i - (float) i);
+				
+				System.out.println(i);
+				System.out.println(lower_factor);
+				System.out.println(upper_factor);
+				
 				final int read_start = (sCount + i) % sCount;
 				final int first_write_end = sCount - read_start;
 				
@@ -140,16 +149,22 @@ public class Acquisition {
 				// --- Directly multiply both (samples and code) DFT results
 				for (; k < first_write_end; ++k)
 				{
-					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
-					res_i_1[k] = sample_dft_i[read_index] * code_r_dft[k] + sample_dft_r[read_index] * code_i_dft[k];
+					final float s_r = sample_dft_r[read_index] * lower_factor + (read_index + 1 < sCount ? sample_dft_r[read_index + 1] : sample_dft_r[0]) * upper_factor;
+					final float s_i = sample_dft_i[read_index] * lower_factor + (read_index + 1 < sCount ? sample_dft_i[read_index + 1] : sample_dft_i[0]) * upper_factor;
+					
+					res_r_1[k] = s_r * code_r_dft[k] - s_i * code_i_dft[k]; 
+					res_i_1[k] = s_i * code_r_dft[k] + s_r * code_i_dft[k];
 					++read_index;
 				}
 				
 				read_index = 0; // Wrapping around to zero
 				for (; k < sCount; ++k)
 				{
-					res_r_1[k] = sample_dft_r[read_index] * code_r_dft[k] - sample_dft_i[read_index] * code_i_dft[k]; 
-					res_i_1[k] = sample_dft_i[read_index] * code_r_dft[k] + sample_dft_r[read_index] * code_i_dft[k];
+					final float s_r = sample_dft_r[read_index] * lower_factor + (read_index + 1 < sCount ? sample_dft_r[read_index + 1] : sample_dft_r[0]) * upper_factor;
+					final float s_i = sample_dft_i[read_index] * lower_factor + (read_index + 1 < sCount ? sample_dft_i[read_index + 1] : sample_dft_i[0]) * upper_factor;
+					
+					res_r_1[k] = s_r * code_r_dft[k] - s_i * code_i_dft[k]; 
+					res_i_1[k] = s_i * code_r_dft[k] + s_r * code_i_dft[k];
 					++read_index;
 				}
 			}
@@ -169,6 +184,9 @@ public class Acquisition {
 				
 				final float res_r = sumreal / sCount;
 				final float res_i = sumimag / sCount;
+				
+				if (fd == -1000.0f && k == 32)
+					System.out.println(res_r * res_r + res_i * res_i);
 				
 				// --- Search the maximum in the resulting vector
 				if (smax < res_r * res_r + res_i * res_i) {
