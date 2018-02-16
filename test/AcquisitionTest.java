@@ -15,7 +15,7 @@ public class AcquisitionTest {
 
 		Acquisition acq = null;
 		
-		int testNr = 1;
+		int testNr = 6;
 		
 		String Nr = Integer.toString(testNr);
 		if(Nr.length() == 1){
@@ -37,7 +37,7 @@ public class AcquisitionTest {
 			int nrOfSamples;
 			
 			String line = readLine(brData);
-			nrOfSamples = 400;//Integer.parseInt(line);
+			nrOfSamples = Integer.parseInt(line);
 			acq = new Acquisition(nrOfSamples);
 
 			System.out.println("Sample Count: " + nrOfSamples);
@@ -96,7 +96,7 @@ public class AcquisitionTest {
 		
 		boolean passed = res == acquisition && acq.getCodeVerschiebung()== codeVersch && acq.getDopplerverschiebung() == freq;
 		System.out.println((passed?"PASSED":"FAILED") + " Test Nr. " + Nr);
-		if(!passed){
+		if(true){
 			System.out.println("Epected " + acquisition + " acquistion");
 			System.out.println("    " + codeVersch);
 			System.out.println("    " + freq);
